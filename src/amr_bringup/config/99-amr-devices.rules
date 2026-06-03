@@ -1,0 +1,50 @@
+# /etc/udev/rules.d/99-amr-devices.rules
+#
+# Đặt tên cố định cho thiết bị USB để tránh /dev/ttyUSB0 đổi chỗ cho nhau
+# Cài đặt:
+#   sudo cp 99-amr-devices.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#
+# Sau đó:
+#   ESP32  → /dev/esp32
+#   LiDAR  → /dev/lidar
+#
+# Để tìm ATTRS{idVendor} và ATTRS{idProduct} của từng thiết bị:
+#   udevadm info -a -n /dev/ttyUSB0 | grep -E "idVendor|idProduct|serial"
+#   udevadm info -a -n /dev/ttyUSB1 | grep -E "idVendor|idProduct|serial"
+#
+# Chip USB phổ biến:
+#   CP2102 (nhiều ESP32 dev board)  : idVendor="10c4"  idProduct="ea60"
+#   CH340  (Arduino Nano, clone)    : idVendor="1a86"  idProduct="7523"
+#   FTDI   (nhiều LiDAR)            : idVendor="0403"  idProduct="6001"
+#   CP2104 (ESP32 boards khác)      : idVendor="10c4"  idProduct="ea60"
+#
+# Nếu cùng chip: phải dùng ATTRS{serial} để phân biệt
+# Tìm serial: udevadm info -a -n /dev/ttyUSB0 | grep serial
+
+# ── ESP32 (CP2102) ─────────────────────────────────────────
+# Thay ATTRS{serial} bằng serial thực của ESP32 bạn
+# ESP32
+SUBSYSTEM=="tty", KERNEL=="ttyUSB*", KERNELS=="4-1.1", \
+    SYMLINK+="esp32", MODE="0666", GROUP="dialout"
+
+
+# ── RPLIDAR A1M8 (CP2102) ──────────────────────────────────
+# Thay ATTRS{serial} bằng serial thực của LiDAR
+# LiDAR
+SUBSYSTEM=="tty", KERNEL=="ttyUSB*", KERNELS=="2-1", \
+    SYMLINK+="lidar", MODE="0666", GROUP="dialout"
+
+
+# ── Nếu dùng LDROBOT (CP2102 khác serial) ─────────────────
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+#     ATTRS{serial}=="YOUR_LDROBOT_SERIAL_HERE", \
+#     SYMLINK+="lidar", MODE="0666", GROUP="dialout"
+
+# ── Fallback: không có serial — dùng VID:PID khác nhau ────
+# Nếu ESP32 dùng CH340 và LiDAR dùng CP2102:
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", \
+#     SYMLINK+="esp32", MODE="0666"
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+#     SYMLINK+="lidar", MODE="0666"

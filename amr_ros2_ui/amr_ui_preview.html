@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>AMR ROS2 Control Panel — Preview</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', sans-serif; font-size: 12px; overflow: hidden; }
+
+/* ── Layout ── */
+.app { display: flex; flex-direction: column; height: 100vh; padding: 8px; gap: 8px; }
+.header { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
+.content { display: flex; gap: 8px; flex: 1; overflow: hidden; }
+.panel-left  { width: 255px; min-width: 255px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.panel-center{ flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.panel-right { width: 255px; min-width: 255px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+
+/* ── Common ── */
+.groupbox { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 10px 8px; }
+.groupbox-title { color: #58a6ff; font-size: 11px; font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+label { color: #8b949e; font-size: 11px; }
+.val { color: #58a6ff; font-weight: bold; font-size: 11px; }
+.val-yellow { color: #fbbf24; font-weight: bold; font-size: 11px; }
+.val-purple { color: #a78bfa; font-size: 11px; }
+.val-green  { color: #7ee787; font-size: 11px; }
+.val-red    { color: #f87171; font-size: 11px; }
+
+/* ── Buttons ── */
+button { background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; padding: 5px 10px; font-size: 11px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+button:hover { background: #30363d; border-color: #58a6ff; }
+button:active { background: #1f6feb; transform: scale(0.97); }
+.btn-green  { background: #238636; border-color: #2ea043; color: white; }
+.btn-red    { background: #b91c1c; border-color: #dc2626; color: white; }
+.btn-blue   { background: #1d4ed8; border-color: #3b82f6; color: white; }
+.btn-purple { background: #7c3aed; border-color: #8b5cf6; color: white; }
+.btn-estop  { background: #dc2626; border: 2px solid #ef4444; color: white; font-size: 13px; font-weight: bold; width: 100%; padding: 12px; border-radius: 8px; letter-spacing: 1px; }
+.btn-estop:hover { background: #ef4444; }
+
+/* ── Inputs ── */
+input[type=text], select { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #e6edf3; padding: 4px 8px; font-size: 11px; width: 100%; }
+input[type=text]:focus, select:focus { outline: none; border-color: #58a6ff; }
+input[type=number] { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #e6edf3; padding: 4px 6px; font-size: 11px; width: 80px; }
+
+/* ── Status dot ── */
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dot-green  { background: #238636; box-shadow: 0 0 6px #238636; }
+.dot-red    { background: #b91c1c; }
+.dot-yellow { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+
+/* ── Row layouts ── */
+.row { display: flex; gap: 5px; align-items: center; margin-bottom: 5px; }
+.row-sb { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.flex1 { flex: 1; }
+
+/* ── D-Pad ── */
+.dpad { display: grid; grid-template-columns: 48px 48px 48px 36px; grid-template-rows: 38px 38px 38px; gap: 3px; margin-bottom: 6px; }
+.dpad-btn { display: flex; align-items: center; justify-content: center; font-size: 14px; border-radius: 6px; cursor: pointer; user-select: none; }
+.dpad-btn:active { background: #1f6feb; }
+
+/* ── Progress bar ── */
+.progress { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; height: 16px; width: 90px; overflow: hidden; display: flex; align-items: center; }
+.progress-fill { background: #238636; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; transition: width .3s; }
+
+/* ── Map canvas ── */
+.map-container { flex: 1; background: #050a0f; border: 1px solid #30363d; border-radius: 6px; position: relative; overflow: hidden; min-height: 300px; }
+canvas#map { width: 100%; height: 100%; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid #30363d; margin-bottom: 6px; }
+.tab { padding: 5px 14px; border-radius: 4px 4px 0 0; cursor: pointer; color: #8b949e; border: 1px solid transparent; border-bottom: none; font-size: 11px; }
+.tab.active { color: #58a6ff; background: #161b22; border-color: #30363d; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Console ── */
+.console { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 6px; font-family: 'Courier New', monospace; font-size: 10px; color: #7ee787; height: 90px; overflow-y: auto; line-height: 1.5; }
+.console .ts { color: #8b949e; }
+.console .warn { color: #fbbf24; }
+.console .err  { color: #f87171; }
+.console .cmd  { color: #a78bfa; }
+
+/* ── Header title ── */
+.title { color: #58a6ff; font-size: 17px; font-weight: bold; }
+.subtitle { color: #8b949e; font-size: 11px; }
+
+/* ── Slider ── */
+input[type=range] { -webkit-appearance: none; width: 100%; height: 5px; background: #30363d; border-radius: 3px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #58a6ff; border-radius: 50%; cursor: pointer; }
+
+/* ── State frame ── */
+.state-frame { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 8px; }
+.state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+
+/* ── Map toolbar ── */
+.map-toolbar { display: flex; gap: 5px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.checkbox-wrap { display: flex; align-items: center; gap: 4px; }
+input[type=checkbox] { accent-color: #1f6feb; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+
+/* ── Status bar ── */
+.statusbar { background: #161b22; border-top: 1px solid #30363d; padding: 3px 12px; color: #8b949e; font-size: 10px; border-radius: 0 0 4px 4px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="title">🤖  AMR Control Panel</div>
+    <div class="subtitle">ROS2 Humble · Nav2 · SLAM Toolbox · RPLidar</div>
+    <div style="flex:1"></div>
+    <!-- ROS Status -->
+    <div class="row" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:4px 10px;gap:6px;margin:0">
+      <span class="dot dot-yellow" id="ros-dot"></span>
+      <span style="color:#fbbf24;font-size:10px;font-weight:bold" id="ros-status">ROS2: Demo Mode</span>
+    </div>
+    <!-- Battery -->
+    <div class="row" style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:4px 10px;gap:6px;margin:0">
+      🔋
+      <div class="progress"><div class="progress-fill" style="width:78%">78%</div></div>
+    </div>
+    <!-- Clock -->
+    <div id="clock" style="color:#8b949e;font-size:11px;min-width:64px;text-align:right">00:00:00</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+
+    <!-- LEFT PANEL -->
+    <div class="panel-left">
+
+      <!-- Connection -->
+      <div class="groupbox">
+        <div class="groupbox-title">🔌 Serial Connection</div>
+        <div class="row-sb" style="margin-bottom:5px">
+          <label>Port:</label>
+          <select id="sel-port" style="width:140px">
+            <option>/dev/ttyUSB0</option>
+            <option>/dev/ttyUSB1</option>
+            <option>/dev/ttyACM0</option>
+          </select>
+        </div>
+        <div class="row-sb" style="margin-bottom:5px">
+          <label>Baud:</label>
+          <select id="sel-baud" style="width:140px">
+            <option>115200</option>
+            <option>57600</option>
+            <option>9600</option>
+          </select>
+        </div>
+        <div class="row" style="gap:4px;margin-bottom:6px">
+          <button onclick="refreshPorts()" style="flex:1">↻</button>
+          <button class="btn-green" onclick="doConnect()" style="flex:2">Connect</button>
+          <button class="btn-red" onclick="doDisconnect()" style="flex:2">Disconnect</button>
+        </div>
+        <div class="state-frame row" style="gap:6px;margin-bottom:0">
+          <span class="dot dot-red" id="conn-dot"></span>
+          <span id="conn-status" class="val-red">Disconnected</span>
+        </div>
+      </div>
+
+      <!-- Robot State -->
+      <div class="groupbox">
+        <div class="groupbox-title">📊 Robot State</div>
+        <div class="state-frame state-grid">
+          <label>X Position:</label> <span class="val" id="pos-x">0.000 m</span>
+          <label>Y Position:</label> <span class="val" id="pos-y">0.000 m</span>
+          <label>Heading:</label>    <span class="val" id="heading">0.0°</span>
+          <label>Lin. Vel:</label>   <span class="val-yellow" id="lin-vel">0.000 m/s</span>
+          <label>Ang. Vel:</label>   <span class="val-yellow" id="ang-vel">0.000 rad/s</span>
+          <label>Left Enc:</label>   <span class="val-purple" id="enc-l">0</span>
+          <label>Right Enc:</label>  <span class="val-purple" id="enc-r">0</span>
+        </div>
+      </div>
+
+      <!-- Manual Control -->
+      <div class="groupbox">
+        <div class="groupbox-title">🕹️ Manual Control (Teleop)</div>
+        <!-- D-Pad -->
+        <div class="dpad">
+          <!-- row 0 -->
+          <div></div>
+          <button class="dpad-btn" id="btn-fwd" onmousedown="drive(1,0)" onmouseup="stop()" ontouchstart="drive(1,0)" ontouchend="stop()">▲</button>
+          <div></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;grid-row:1/4">
+            <label style="font-size:9px">Vel</label>
+            <input type="range" id="vel-slider" orient="vertical" min="0" max="100" value="50"
+              style="writing-mode:vertical-lr;direction:rtl;width:16px;height:70px"
+              oninput="document.getElementById('vel-pct').textContent=this.value+'%'">
+            <span id="vel-pct" style="color:#58a6ff;font-size:9px">50%</span>
+          </div>
+          <!-- row 1 -->
+          <button class="dpad-btn" onmousedown="drive(0,1)" onmouseup="stop()">◀</button>
+          <button class="dpad-btn btn-purple" onclick="stop()">■</button>
+          <button class="dpad-btn" onmousedown="drive(0,-1)" onmouseup="stop()">▶</button>
+          <!-- row 2 -->
+          <div></div>
+          <button class="dpad-btn" onmousedown="drive(-1,0)" onmouseup="stop()">▼</button>
+          <div></div>
+        </div>
+        <!-- Params -->
+        <div class="row-sb" style="margin-bottom:4px"><label>Max Linear (m/s):</label><input type="number" id="max-lin" value="0.5" min="0.05" max="2.0" step="0.05" style="width:70px"></div>
+        <div class="row-sb"><label>Max Angular (rad/s):</label><input type="number" id="max-ang" value="1.0" min="0.1" max="3.14" step="0.1" style="width:70px"></div>
+      </div>
+
+      <!-- E-STOP -->
+      <button class="btn-estop" onclick="estop()">⚠  EMERGENCY STOP</button>
+
+    </div><!-- /left panel -->
+
+    <!-- CENTER PANEL -->
+    <div class="panel-center">
+
+      <!-- Map Group -->
+      <div class="groupbox" style="flex:1;display:flex;flex-direction:column">
+        <div class="groupbox-title">🗺️ Map Visualization</div>
+        <div class="map-toolbar">
+          <button onclick="fitView()">⊡ Fit</button>
+          <button onclick="zoomIn()">+</button>
+          <button onclick="zoomOut()">−</button>
+          <label class="checkbox-wrap"><input type="checkbox" id="chk-lidar" checked> LiDAR</label>
+          <label class="checkbox-wrap"><input type="checkbox" id="chk-path" checked> Path</label>
+          <label class="checkbox-wrap"><input type="checkbox" id="chk-costmap"> Costmap</label>
+          <div style="flex:1"></div>
+          <span id="map-coords" style="color:#8b949e;font-size:10px">Robot: (0.00, 0.00)</span>
+        </div>
+        <div class="map-container">
+          <canvas id="map"></canvas>
+        </div>
+      </div>
+
+      <!-- Bottom Tabs -->
+      <div class="groupbox" style="max-height:180px;min-height:150px">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('console',this)">📟 Console Log</div>
+          <div class="tab" onclick="switchTab('topics',this)">📡 ROS2 Topics</div>
+        </div>
+        <div id="tab-console" class="tab-content active">
+          <div class="row" style="margin-bottom:5px;gap:4px">
+            <input type="text" id="cmd-input" placeholder="Enter ROS2 command..." class="flex1">
+            <button onclick="sendCmd()">Send</button>
+            <button onclick="document.getElementById('console').innerHTML=''">Clear</button>
+          </div>
+          <div class="console" id="console">
+<span class="ts">[AMR]</span> <span>Control Panel initialized</span><br>
+<span class="ts">[00:00]</span> <span class="warn">Running in DEMO mode — install ROS2 Humble to connect</span><br>
+<span class="ts">[00:00]</span> <span>Serial bridge ready on /dev/ttyUSB0</span><br>
+          </div>
+        </div>
+        <div id="tab-topics" class="tab-content">
+          <div class="row" style="margin-bottom:5px;gap:4px">
+            <input type="text" placeholder="Filter topics..." class="flex1">
+            <button onclick="refreshTopics()">↻ Refresh</button>
+          </div>
+          <div class="console" id="topics-list">
+<span style="color:#58a6ff">/cmd_vel</span> <span style="color:#8b949e">[geometry_msgs/Twist]</span><br>
+<span style="color:#58a6ff">/odom</span> <span style="color:#8b949e">[nav_msgs/Odometry]</span><br>
+<span style="color:#58a6ff">/scan</span> <span style="color:#8b949e">[sensor_msgs/LaserScan]</span><br>
+<span style="color:#58a6ff">/map</span> <span style="color:#8b949e">[nav_msgs/OccupancyGrid]</span><br>
+<span style="color:#58a6ff">/amcl_pose</span> <span style="color:#8b949e">[geometry_msgs/PoseWithCovarianceStamped]</span><br>
+<span style="color:#58a6ff">/goal_pose</span> <span style="color:#8b949e">[geometry_msgs/PoseStamped]</span><br>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT PANEL -->
+    <div class="panel-right">
+
+      <!-- Navigation -->
+      <div class="groupbox">
+        <div class="groupbox-title">🧭 Navigation (Nav2)</div>
+        <div class="row" style="gap:4px;margin-bottom:6px">
+          <button class="btn-blue" onclick="startNav()" style="flex:1">▶ Start Nav2</button>
+          <button onclick="stopNav()" style="flex:1">■ Stop</button>
+        </div>
+        <div class="state-frame state-grid" style="margin-bottom:6px">
+          <label>Status:</label>   <span id="nav-status" style="color:#8b949e;font-weight:bold">IDLE</span>
+          <label>Goal:</label>     <span class="val" id="nav-goal">None</span>
+          <label>Distance:</label> <span class="val-yellow" id="nav-dist">--- m</span>
+        </div>
+        <label style="display:block;margin-bottom:4px">Set Goal Position:</label>
+        <div class="row-sb" style="margin-bottom:4px"><label>X (m):</label><input type="number" id="goal-x" value="0.0" step="0.1" style="width:80px"></div>
+        <div class="row-sb" style="margin-bottom:4px"><label>Y (m):</label><input type="number" id="goal-y" value="0.0" step="0.1" style="width:80px"></div>
+        <div class="row-sb" style="margin-bottom:6px"><label>Yaw (°):</label><input type="number" id="goal-yaw" value="0.0" step="5" style="width:80px"></div>
+        <div class="row" style="gap:4px;margin-bottom:6px">
+          <button class="btn-blue" onclick="sendGoal()" style="flex:1">📍 Send Goal</button>
+          <button onclick="cancelGoal()" style="flex:1">✕ Cancel</button>
+        </div>
+        <div class="row" style="gap:4px">
+          <input type="text" placeholder="map.yaml" id="map-file" class="flex1">
+          <button style="width:30px">...</button>
+        </div>
+      </div>
+
+      <!-- SLAM -->
+      <div class="groupbox">
+        <div class="groupbox-title">🔄 SLAM Toolbox</div>
+        <div class="row" style="gap:4px;margin-bottom:5px">
+          <button class="btn-purple" onclick="startSlam()" style="flex:1">▶ Start SLAM</button>
+          <button onclick="stopSlam()" style="flex:1">■ Stop</button>
+        </div>
+        <div class="row" style="gap:4px;margin-bottom:6px">
+          <button onclick="saveMap()" style="flex:1">💾 Save Map</button>
+          <button onclick="loadMap()" style="flex:1">📂 Load Map</button>
+        </div>
+        <div class="state-frame">
+          <div class="row-sb" style="margin-bottom:4px">
+            <label>Mode:</label>
+            <select id="slam-mode" style="width:120px">
+              <option>Mapping</option>
+              <option>Localization</option>
+              <option>Async</option>
+            </select>
+          </div>
+          <div class="row-sb" style="margin-bottom:4px">
+            <label>Status:</label>
+            <span class="val-red" id="slam-status">Stopped</span>
+          </div>
+          <div class="row-sb">
+            <label>Map Size:</label>
+            <span style="color:#8b949e" id="map-size">---</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LiDAR -->
+      <div class="groupbox">
+        <div class="groupbox-title">📡 LiDAR (RPLidar)</div>
+        <div class="row" style="gap:4px;margin-bottom:5px">
+          <button onclick="startLidar()" style="flex:1">▶ Start</button>
+          <button onclick="stopLidar()" style="flex:1">■ Stop</button>
+        </div>
+        <div class="row-sb" style="margin-bottom:6px">
+          <label>Model:</label>
+          <select id="lidar-model" style="width:130px">
+            <option>RPLidar A1</option>
+            <option>RPLidar A2</option>
+            <option>RPLidar A3</option>
+            <option>RPLidar S1</option>
+          </select>
+        </div>
+        <div class="state-frame">
+          <div class="row-sb" style="margin-bottom:4px">
+            <label>Status:</label> <span class="val-red" id="lidar-status">Stopped</span>
+          </div>
+          <div class="row-sb" style="margin-bottom:4px">
+            <label>Scan Rate:</label> <span class="val" id="scan-rate">--- Hz</span>
+          </div>
+          <div class="row-sb">
+            <label>Points:</label> <span class="val" id="scan-pts">---</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right -->
+
+  </div><!-- /content -->
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <span id="statusbar-msg">Ready — Demo Mode (No ROS2)</span>
+    <span>AMR ROS2 Control Panel v1.0</span>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  connected: false,
+  ros2: false,
+  robotX: 0, robotY: 0, robotYaw: 0,
+  linVel: 0, angVel: 0,
+  encL: 0, encR: 0,
+  scanRanges: [],
+  pathPts: [],
+  goalX: null, goalY: null,
+  scale: 70, offsetX: 0, offsetY: 0,
+  demoAngle: 0, demoTimer: null,
+  navActive: false, slamActive: false, lidarActive: false,
+};
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().slice(0,8);
+}, 1000);
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── Map Canvas ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const c = canvas.parentElement;
+  canvas.width  = c.clientWidth;
+  canvas.height = c.clientHeight;
+  drawMap();
+}
+new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+
+function mapToCanvas(mx, my) {
+  const cx = canvas.width/2  + state.offsetX;
+  const cy = canvas.height/2 + state.offsetY;
+  return [cx + mx*state.scale, cy - my*state.scale];
+}
+
+function drawMap() {
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = '#050a0f';
+  ctx.fillRect(0,0,w,h);
+
+  // Grid
+  const step = state.scale;
+  if (step > 10) {
+    ctx.strokeStyle = '#111820';
+    ctx.lineWidth = 1;
+    const cx = w/2+state.offsetX, cy = h/2+state.offsetY;
+    for (let x = cx%step; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for (let y = cy%step; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  }
+
+  // Axes
+  const [ox,oy] = mapToCanvas(0,0);
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ox-10,oy); ctx.lineTo(ox+10,oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox,oy-10); ctx.lineTo(ox,oy+10); ctx.stroke();
+
+  // LiDAR
+  if (document.getElementById('chk-lidar').checked && state.scanRanges.length) {
+    ctx.fillStyle = 'rgba(20,180,255,0.5)';
+    state.scanRanges.forEach((r,i) => {
+      if (r > 12 || r < 0.05) return;
+      const angle = -Math.PI + i * (Math.PI/180) + state.robotYaw;
+      const px = state.robotX + r*Math.cos(angle);
+      const py = state.robotY + r*Math.sin(angle);
+      const [sx,sy] = mapToCanvas(px,py);
+      ctx.fillRect(sx-1,sy-1,2,2);
+    });
+  }
+
+  // Path
+  if (document.getElementById('chk-path').checked && state.pathPts.length > 1) {
+    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    state.pathPts.forEach(([px,py],i) => {
+      const [sx,sy] = mapToCanvas(px,py);
+      i===0 ? ctx.moveTo(sx,sy) : ctx.lineTo(sx,sy);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Goal
+  if (state.goalX !== null) {
+    const [gx,gy] = mapToCanvas(state.goalX, state.goalY);
+    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(gx,gy,12,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx-12,gy); ctx.lineTo(gx+12,gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx,gy-12); ctx.lineTo(gx,gy+12); ctx.stroke();
+    ctx.fillStyle='#f59e0b'; ctx.font='9px Arial'; ctx.fillText('GOAL',gx+14,gy+4);
+  }
+
+  // Robot
+  const [rx,ry] = mapToCanvas(state.robotX, state.robotY);
+  const sz = Math.max(12, state.scale*0.3);
+  ctx.save();
+  ctx.translate(rx,ry);
+  ctx.rotate(-state.robotYaw);
+  ctx.beginPath(); ctx.arc(0,0,sz,0,Math.PI*2);
+  ctx.fillStyle='rgba(31,111,235,0.7)'; ctx.fill();
+  ctx.strokeStyle='#58a6ff'; ctx.lineWidth=2; ctx.stroke();
+  // Arrow
+  ctx.strokeStyle='#e6edf3'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(sz+4,0); ctx.stroke();
+  ctx.fillStyle='#e6edf3';
+  ctx.beginPath(); ctx.moveTo(sz+4,0); ctx.lineTo(sz-2,-4); ctx.lineTo(sz-2,4); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle='#e6edf3'; ctx.font='bold 9px Arial';
+  ctx.fillText('AMR', rx+sz+6, ry+4);
+
+  // Coords
+  ctx.fillStyle='#8b949e'; ctx.font='9px Courier New';
+  ctx.fillText(`Map: (${canvasMouseX.toFixed(2)}, ${canvasMouseY.toFixed(2)}) m  |  Scale: ${state.scale.toFixed(0)} px/m`, 8, h-8);
+}
+
+// Mouse/touch on map
+let canvasMouseX=0, canvasMouseY=0, dragging=false, dragStart={};
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  const cx = canvas.width/2+state.offsetX, cy = canvas.height/2+state.offsetY;
+  canvasMouseX = (e.clientX-r.left-cx)/state.scale;
+  canvasMouseY = -(e.clientY-r.top-cy)/state.scale;
+  if (dragging) {
+    state.offsetX = dragStart.ox + (e.clientX-r.left - dragStart.mx);
+    state.offsetY = dragStart.oy + (e.clientY-r.top  - dragStart.my);
+    drawMap();
+  }
+});
+canvas.addEventListener('mousedown', e => {
+  const r = canvas.getBoundingClientRect();
+  dragging = true;
+  dragStart = {mx:e.clientX-r.left, my:e.clientY-r.top, ox:state.offsetX, oy:state.offsetY};
+});
+canvas.addEventListener('mouseup', () => { dragging=false; });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  state.scale = Math.max(10, Math.min(500, state.scale*(e.deltaY<0?1.15:1/1.15)));
+  drawMap();
+}, {passive:false});
+
+function fitView() { state.scale=70; state.offsetX=0; state.offsetY=0; drawMap(); }
+function zoomIn()  { state.scale=Math.min(500,state.scale*1.3); drawMap(); }
+function zoomOut() { state.scale=Math.max(10,state.scale/1.3); drawMap(); }
+
+// ── Demo animation ─────────────────────────────────────────────────────────
+function startDemo() {
+  state.demoTimer = setInterval(() => {
+    state.demoAngle += 0.03;
+    state.robotX  = Math.cos(state.demoAngle*0.3)*2.0;
+    state.robotY  = Math.sin(state.demoAngle*0.3)*2.0;
+    state.robotYaw = state.demoAngle*0.5;
+    state.linVel  = 0.12;
+    state.angVel  = 0.05;
+    state.encL   += 3;
+    state.encR   += 3;
+    state.scanRanges = Array.from({length:360},(_,i)=>
+      2.0 + Math.sin(i*0.05+state.demoAngle)*0.8 + Math.random()*0.1);
+    // Update labels
+    document.getElementById('pos-x').textContent = state.robotX.toFixed(3)+' m';
+    document.getElementById('pos-y').textContent = state.robotY.toFixed(3)+' m';
+    document.getElementById('heading').textContent = (state.robotYaw*180/Math.PI).toFixed(1)+'°';
+    document.getElementById('lin-vel').textContent = state.linVel.toFixed(3)+' m/s';
+    document.getElementById('ang-vel').textContent = state.angVel.toFixed(3)+' rad/s';
+    document.getElementById('enc-l').textContent = state.encL;
+    document.getElementById('enc-r').textContent = state.encR;
+    document.getElementById('map-coords').textContent =
+      `Robot: (${state.robotX.toFixed(2)}, ${state.robotY.toFixed(2)})`;
+    document.getElementById('scan-pts').textContent = '360';
+    document.getElementById('scan-rate').textContent = '10 Hz';
+    drawMap();
+  }, 100);
+}
+startDemo();
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function log(msg, level='INFO') {
+  const colors = {INFO:'#7ee787',WARN:'#fbbf24',ERROR:'#f87171',CMD:'#a78bfa'};
+  const c = colors[level]||'#e6edf3';
+  const ts = new Date().toTimeString().slice(0,8);
+  const el = document.getElementById('console');
+  el.innerHTML += `<span class="ts">[${ts}]</span> <span style="color:${c}">${msg}</span><br>`;
+  el.scrollTop = el.scrollHeight;
+}
+function setStatus(msg) { document.getElementById('statusbar-msg').textContent = msg; }
+
+// ── Button handlers ────────────────────────────────────────────────────────
+function doConnect() {
+  const port = document.getElementById('sel-port').value;
+  const baud = document.getElementById('sel-baud').value;
+  document.getElementById('conn-dot').className = 'dot dot-green';
+  document.getElementById('conn-status').textContent = 'Connected';
+  document.getElementById('conn-status').className = 'val-green';
+  log(`[SERIAL] Connected: ${port} @ ${baud} baud`, 'INFO');
+  setStatus(`Connected: ${port} @ ${baud}`);
+}
+function doDisconnect() {
+  document.getElementById('conn-dot').className = 'dot dot-red';
+  document.getElementById('conn-status').textContent = 'Disconnected';
+  document.getElementById('conn-status').className = 'val-red';
+  log('[SERIAL] Disconnected', 'WARN');
+  setStatus('Disconnected');
+}
+function refreshPorts() { log('[SERIAL] Refreshing ports...', 'INFO'); }
+
+function drive(fwd, rot) {
+  const pct = document.getElementById('vel-slider').value / 100;
+  const lin = fwd * parseFloat(document.getElementById('max-lin').value) * pct;
+  const ang = rot * parseFloat(document.getElementById('max-ang').value) * pct;
+  document.getElementById('lin-vel').textContent = lin.toFixed(3)+' m/s';
+  document.getElementById('ang-vel').textContent = ang.toFixed(3)+' rad/s';
+}
+function stop() {
+  document.getElementById('lin-vel').textContent = '0.000 m/s';
+  document.getElementById('ang-vel').textContent = '0.000 rad/s';
+}
+function estop() {
+  stop();
+  log('[ESTOP] ⚠ EMERGENCY STOP ACTIVATED ⚠', 'ERROR');
+  setStatus('⚠ EMERGENCY STOP');
+  document.getElementById('btn-fwd').style.background='#b91c1c';
+  setTimeout(()=>document.getElementById('btn-fwd').style.background='',500);
+}
+
+function startNav() {
+  document.getElementById('nav-status').textContent='STARTING';
+  document.getElementById('nav-status').style.color='#fbbf24';
+  log('[NAV2] Starting navigation stack...', 'INFO');
+  setTimeout(()=>{
+    document.getElementById('nav-status').textContent='ACTIVE';
+    document.getElementById('nav-status').style.color='#7ee787';
+  },800);
+}
+function stopNav() {
+  document.getElementById('nav-status').textContent='IDLE';
+  document.getElementById('nav-status').style.color='#8b949e';
+  log('[NAV2] Stopped', 'WARN');
+}
+function sendGoal() {
+  const x=parseFloat(document.getElementById('goal-x').value);
+  const y=parseFloat(document.getElementById('goal-y').value);
+  const yaw=parseFloat(document.getElementById('goal-yaw').value);
+  state.goalX=x; state.goalY=y;
+  document.getElementById('nav-goal').textContent=`(${x.toFixed(1)}, ${y.toFixed(1)})`;
+  document.getElementById('nav-status').textContent='NAVIGATING';
+  document.getElementById('nav-status').style.color='#7ee787';
+  document.getElementById('nav-dist').textContent=
+    Math.sqrt(x*x+y*y).toFixed(2)+' m';
+  log(`[NAV2] Goal sent: x=${x} y=${y} yaw=${yaw}°`, 'INFO');
+  drawMap();
+}
+function cancelGoal() {
+  state.goalX=null; state.goalY=null;
+  document.getElementById('nav-goal').textContent='None';
+  document.getElementById('nav-status').textContent='IDLE';
+  document.getElementById('nav-status').style.color='#8b949e';
+  document.getElementById('nav-dist').textContent='--- m';
+  log('[NAV2] Goal cancelled', 'WARN');
+  drawMap();
+}
+
+function startSlam() {
+  const m=document.getElementById('slam-mode').value;
+  document.getElementById('slam-status').textContent='Running';
+  document.getElementById('slam-status').className='val-green';
+  document.getElementById('map-size').textContent='512×512';
+  log(`[SLAM] Started in ${m} mode`, 'INFO');
+  state.slamActive=true;
+}
+function stopSlam() {
+  document.getElementById('slam-status').textContent='Stopped';
+  document.getElementById('slam-status').className='val-red';
+  log('[SLAM] Stopped', 'WARN');
+}
+function saveMap() { log('[SLAM] Map saved to my_map.yaml', 'INFO'); }
+function loadMap() { log('[SLAM] Map loaded', 'INFO'); }
+
+function startLidar() {
+  document.getElementById('lidar-status').textContent='Running';
+  document.getElementById('lidar-status').className='val-green';
+  log('[LIDAR] Started: '+document.getElementById('lidar-model').value, 'INFO');
+}
+function stopLidar() {
+  document.getElementById('lidar-status').textContent='Stopped';
+  document.getElementById('lidar-status').className='val-red';
+  log('[LIDAR] Stopped', 'WARN');
+}
+
+function sendCmd() {
+  const inp = document.getElementById('cmd-input');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  log('$ '+cmd, 'CMD');
+  inp.value='';
+}
+document.getElementById('cmd-input').addEventListener('keydown', e => {
+  if (e.key==='Enter') sendCmd();
+});
+
+function refreshTopics() { log('[TOPICS] Refreshing...', 'INFO'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# config/amr_params.yaml
+# Tham số cho AMR serial bridge
+# Chỉnh sửa theo hardware thực tế
+
+amr_serial_bridge:
+  ros__parameters:
+    port: /dev/esp32        # Thay bằng port thực (dùng: ls /dev/tty*)
+    baud: 115200
+    wheel_radius: 0.0435      # metres (đường kính 87mm → bán kính 43.5mm)
+    wheel_base: 0.20          # metres (khoảng cách 2 bánh 200mm)
+    encoder_ppr: 4400         # calibrated: 10 cm actual was reported as 1.00 m
+    odom_frame: odom
+    base_frame: base_link
+    cmd_linear_gain: 1.5      # tăng lệnh tiến/lùi gửi xuống ESP32
+    cmd_angular_gain: 1.3     # tăng lệnh xoay gửi xuống ESP32
+    cmd_min_linear: 0.12      # m/s tối thiểu khi có lệnh để thắng ma sát
+    cmd_min_angular: 0.35     # rad/s tối thiểu khi có lệnh xoay
+    cmd_max_linear: 0.6       # giới hạn an toàn lệnh tiến/lùi
+    cmd_max_angular: 1.5      # giới hạn an toàn lệnh xoay
+    cmd_deadband: 0.01        # bỏ qua lệnh rất nhỏ quanh 0
