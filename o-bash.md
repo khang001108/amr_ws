@@ -12,18 +12,29 @@ ls -l /dev | grep lidar
 # source /home/ros2/.bashrc
 #sudo udevadm control --reload-rules
 
-# DDS
+#=============================
+#           DDS
+#=============================
 export ROS_DOMAIN_ID=10
 export ROS_LOCALHOST_ONLY=0
 export ROS_IP=192.168.1.28
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 alias ip='hostname -I'
+
+#=============================
+#           SSH
+#=============================
+alias pi5='nautilus "sftp://ros2@192.168.1.28"'
+alias ssh_pi5='nautilus "ssh khazg@192.168.1.28'
+alias ssh_lap='nautilus "ssh khazg@192.168.1.22'
 alias laptop='nautilus "sftp://ros2@192.168.1.22"'
 alias ssh-enable='sudo systemctl enable ssh && sudo systemctl start ssh'
 alias ssh-disable='sudo systemctl disable ssh && sudo systemctl stop ssh'
 alias ssh-restart='sudo systemctl restart ssh'
 alias ssh-status='sudo systemctl status ssh'
+
+
 alias battery='vcgencmd get_throttled'
 alias all-usb='ls /dev/ttyUSB*'
 alias o-bash='code ~/.bashrc'
